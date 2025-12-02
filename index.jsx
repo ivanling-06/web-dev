@@ -38,7 +38,7 @@ const useOnScreen = (rootMargin = '0px', once = true) => {
     if (ref.current) observer.observe(ref.current);
 
     return () => {
-      if (ref.current) observer.unobserve(entry.target);
+      if (ref.current) observer.unobserve(ref.current);
     };
   }, [rootMargin, once]);
 
@@ -54,10 +54,12 @@ const CountUp = ({ end, duration = 2000, suffix = '' }) => {
     if (!isVisible) return;
 
     let start = 0;
-    const endValue = parseInt(end.replace(/,/g, ''), 10);
+    // Ensure end is treated as a string for regex
+    const endValue = parseInt(String(end).replace(/,/g, ''), 10);
+    const step = Math.ceil(endValue / 100);
 
     const timer = setInterval(() => {
-      start += Math.ceil(endValue / 100);
+      start += step;
       if (start >= endValue) {
         setCount(endValue);
         clearInterval(timer);
@@ -71,7 +73,9 @@ const CountUp = ({ end, duration = 2000, suffix = '' }) => {
 
   return (
     <span ref={ref}>
-      {count.toLocaleString()}
+      {typeof end === 'number' && end % 1 !== 0
+        ? end.toFixed(1) // Keep decimals for 4.9, etc.
+        : count.toLocaleString()}
       {suffix}
     </span>
   );
@@ -210,7 +214,7 @@ const WireframeMesh = () => {
   );
 };
 
-// --- CLIENT MARQUEE COMPONENT ---
+// --- CLIENT MARQUEE COMPONENT (FIXED) ---
 
 const ClientMarquee = () => {
   const clients = [
@@ -227,34 +231,44 @@ const ClientMarquee = () => {
   ];
 
   return (
-    <section className="py-12 bg-slate-900 border-t border-b border-slate-800 overflow-hidden">
-      <div className="flex w-full whitespace-nowrap marquee-container">
-        <style jsx="true">{`
-          @keyframes scroll {
-            0% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(-100%);
-            }
+    <section className="py-12 bg-slate-900 border-t border-b border-slate-800 overflow-hidden relative z-20">
+      {/* Standard CSS style tag for the animation */}
+      <style>
+        {`
+          @keyframes marquee-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
           }
-          .marquee-content {
+          .animate-marquee-infinite {
             display: flex;
-            animation: scroll 30s linear infinite;
-            padding-right: 2rem; /* Ensure seamless loop space */
+            width: fit-content;
+            animation: marquee-scroll 40s linear infinite;
           }
-          .marquee-container:hover .marquee-content {
+          .animate-marquee-infinite:hover {
             animation-play-state: paused;
           }
-        `}</style>
-        {/* Duplicate the content for seamless scrolling effect */}
-        <div className="marquee-content">
-          {[...clients, ...clients].map((client, index) => (
+        `}
+      </style>
+      <div className="w-full overflow-hidden">
+        <div className="animate-marquee-infinite">
+          {/* Original List */}
+          {clients.map((client, index) => (
             <div
-              key={index}
-              className="flex items-center mx-10 opacity-70 hover:opacity-100 transition-opacity"
+              key={`original-${index}`}
+              className="flex items-center mx-12 whitespace-nowrap opacity-70 hover:opacity-100 transition-opacity"
             >
-              <span className="text-4xl font-extrabold text-slate-700 font-heading">
+              <span className="text-3xl md:text-4xl font-extrabold text-slate-700 font-heading">
+                {client}
+              </span>
+            </div>
+          ))}
+          {/* Duplicate List for seamless loop */}
+          {clients.map((client, index) => (
+            <div
+              key={`duplicate-${index}`}
+              className="flex items-center mx-12 whitespace-nowrap opacity-70 hover:opacity-100 transition-opacity"
+            >
+              <span className="text-3xl md:text-4xl font-extrabold text-slate-700 font-heading">
                 {client}
               </span>
             </div>
@@ -288,37 +302,37 @@ const Header = ({ scrollToSection }) => {
     <>
       <style>
         {`
-                    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
-                    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
-                    
-                    .font-heading { font-family: 'Space Grotesk', sans-serif; }
-                    .font-body { font-family: 'IBM Plex Sans', sans-serif; }
-                    
-                    .text-gradient {
-                        background: linear-gradient(to right, #22d3ee, #a78bfa);
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                    }
-                    .bg-gradient-primary {
-                        background: linear-gradient(135deg, #06b6d4 0%, #7c3aed 100%);
-                    }
-                    html { scroll-behavior: smooth; }
+          @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+          
+          .font-heading { font-family: 'Space Grotesk', sans-serif; }
+          .font-body { font-family: 'IBM Plex Sans', sans-serif; }
+          
+          .text-gradient {
+            background: linear-gradient(to right, #22d3ee, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+          }
+          .bg-gradient-primary {
+            background: linear-gradient(135deg, #06b6d4 0%, #7c3aed 100%);
+          }
+          html { scroll-behavior: smooth; }
 
-                    /* Custom scrollbar for mock website modal */
-                    .custom-scroll-y::-webkit-scrollbar {
-                        width: 8px;
-                    }
-                    .custom-scroll-y::-webkit-scrollbar-track {
-                        background: #1e293b; /* slate-800 */
-                    }
-                    .custom-scroll-y::-webkit-scrollbar-thumb {
-                        background: #64748b; /* slate-500 */
-                        border-radius: 4px;
-                    }
-                    .custom-scroll-y::-webkit-scrollbar-thumb:hover {
-                        background: #94a3b8; /* slate-400 */
-                    }
-                `}
+          /* Custom scrollbar for mock website modal */
+          .custom-scroll-y::-webkit-scrollbar {
+            width: 8px;
+          }
+          .custom-scroll-y::-webkit-scrollbar-track {
+            background: #1e293b; /* slate-800 */
+          }
+          .custom-scroll-y::-webkit-scrollbar-thumb {
+            background: #64748b; /* slate-500 */
+            border-radius: 4px;
+          }
+          .custom-scroll-y::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* slate-400 */
+          }
+        `}
       </style>
       <nav
         className={`fixed top-0 w-full z-50 transition-all duration-300 border-b ${scrolled ? 'bg-slate-950/90 backdrop-blur-md border-slate-800 py-3' : 'bg-transparent border-transparent py-5'}`}
@@ -455,16 +469,17 @@ const Hero = ({ scrollToSection }) => {
         </ScrollFadeIn>
 
         <ScrollFadeIn delay="300ms">
+          {/* UPDATED BUTTONS WITH SPECIFIC COLORS */}
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
             <button
               onClick={() => scrollToSection('contact')}
-              className="w-full sm:w-auto bg-gradient-primary text-white px-8 py-4 rounded-full font-bold font-heading text-lg hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] transition-all transform hover:-translate-y-1"
+              className="w-full sm:w-auto bg-blue-600 hover:bg-blue-500 text-white px-8 py-4 rounded-full font-bold font-heading text-lg shadow-[0_0_20px_rgba(37,99,235,0.5)] transition-all transform hover:-translate-y-1"
             >
               Get Your Free Analysis
             </button>
             <button
               onClick={() => scrollToSection('pricing')}
-              className="w-full sm:w-auto px-8 py-4 rounded-full font-bold font-heading text-white border border-slate-700 hover:bg-slate-800/80 backdrop-blur-sm transition-all flex items-center justify-center group"
+              className="w-full sm:w-auto bg-violet-600 hover:bg-violet-500 text-white px-8 py-4 rounded-full font-bold font-heading shadow-[0_0_20px_rgba(124,58,237,0.5)] transition-all transform hover:-translate-y-1 flex items-center justify-center group"
             >
               View Pricing
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -849,110 +864,161 @@ const Pricing = () => {
         features: [
           '15 Key Service Areas',
           'Advanced Technical SEO',
-          'High-Authority Link Building (5/mo)',
+          'Content Strategy & Execution',
           'Quarterly Strategy Review',
         ],
         highlight: true,
       },
       {
-        name: 'National Scale',
+        name: 'National Authority',
         price: '5,000+',
-        desc: 'For businesses targeting national or international markets with high-volume keywords.',
+        desc: 'Dominate competitive national keywords. For brands with global or country-wide reach.',
         features: [
-          'Unlimited Keywords',
-          'Content Creation Engine',
-          'Aggressive Link Building',
-          'Dedicated SEO Analyst',
+          'Enterprise Keyword Targeting',
+          'Full Competitor Analysis',
+          'High-Tier Link Acquisition (PR)',
+          'Dedicated SEO Account Manager',
+        ],
+        highlight: false,
+      },
+    ],
+    reputation: [
+      {
+        name: 'Basic Shield',
+        price: '299',
+        desc: 'Fundamental protection and a steady flow of new, positive reviews.',
+        features: [
+          'Automated Review Request Link',
+          'Monthly Report',
+          'Google/Yelp/FB Integration',
+          'Basic Notification Setup',
+        ],
+        highlight: false,
+      },
+      {
+        name: 'Growth Guardian',
+        price: '799',
+        desc: 'Proactive defense and rapid positive review generation for high-volume service businesses.',
+        features: [
+          'Negative Review Intercept Funnel',
+          'Employee Performance Tracking',
+          'Full Listing Sync (50+ Sites)',
+          '24/7 Threat Monitoring',
+        ],
+        highlight: true,
+      },
+      {
+        name: 'Enterprise Defense',
+        price: '1,500+',
+        desc: 'The highest level of brand protection for multi-location or high-profile companies.',
+        features: [
+          'Dedicated Conflict Resolution Manager',
+          'Review Removal Appeals',
+          'Custom Brand Monitoring',
+          'Crisis Management Protocol',
         ],
         highlight: false,
       },
     ],
   };
 
+  const plans = pricingPlans[selectedService];
+
+  const renderFeatures = (features, highlight) => (
+    <ul className="space-y-4 mb-10 flex-grow">
+      {features.map((feature, i) => (
+        <li key={i} className="flex items-start text-slate-400">
+          <Check
+            className={`w-5 h-5 mr-3 flex-shrink-0 ${highlight ? 'text-white' : 'text-cyan-400'}`}
+          />
+          <span className="font-body text-sm">{feature}</span>
+        </li>
+      ))}
+    </ul>
+  );
+
+  const tabClass = active =>
+    `px-6 py-2 rounded-full font-heading font-semibold text-sm transition-all duration-300 ${
+      active
+        ? 'bg-gradient-primary text-white shadow-lg shadow-violet-500/30'
+        : 'bg-slate-800 text-slate-300 hover:bg-slate-700/80'
+    }`;
+
   return (
     <section id="pricing" className="py-24 bg-slate-950 relative">
       <div className="max-w-7xl mx-auto px-6">
         <SectionHeader
-          title="Transparent Pricing Structures"
-          subtitle="No hidden fees, no confusing tiers. Choose the service you need and the package that fits your ambition."
+          title="Transparent, Scalable Pricing"
+          subtitle="Choose the service focus that matches your immediate business goals."
         />
 
-        {/* Tab Switcher */}
-        <ScrollFadeIn className="flex justify-center mb-16">
-          <div className="flex bg-slate-800 p-1 rounded-full border border-slate-700 shadow-xl">
-            <button
-              onClick={() => setSelectedService('web')}
-              className={`px-8 py-3 rounded-full font-bold font-heading transition-all text-sm uppercase tracking-wider ${
-                selectedService === 'web'
-                  ? 'bg-gradient-primary text-white shadow-lg shadow-violet-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              Website Development
-            </button>
-            <button
-              onClick={() => setSelectedService('seo')}
-              className={`px-8 py-3 rounded-full font-bold font-heading transition-all text-sm uppercase tracking-wider ${
-                selectedService === 'seo'
-                  ? 'bg-gradient-primary text-white shadow-lg shadow-violet-500/20'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              SEO Services
-            </button>
+        <ScrollFadeIn delay="0ms">
+          {/* Pricing Tabs */}
+          <div className="flex justify-center mb-16">
+            <div className="p-1 bg-slate-900 border border-slate-700 rounded-full flex space-x-2">
+              <button
+                className={tabClass(selectedService === 'web')}
+                onClick={() => setSelectedService('web')}
+              >
+                Website Development
+              </button>
+              <button
+                className={tabClass(selectedService === 'seo')}
+                onClick={() => setSelectedService('seo')}
+              >
+                SEO Services (Monthly)
+              </button>
+              <button
+                className={tabClass(selectedService === 'reputation')}
+                onClick={() => setSelectedService('reputation')}
+              >
+                Reputation Management (Monthly)
+              </button>
+            </div>
           </div>
         </ScrollFadeIn>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8">
-          {pricingPlans[selectedService].map((plan, i) => (
-            <ScrollFadeIn key={i} delay={`${i * 100}ms`} className="h-full">
+        <div className="grid lg:grid-cols-3 gap-8">
+          {plans.map((plan, i) => (
+            <ScrollFadeIn key={i} delay={`${i * 150}ms`} className="h-full">
               <div
                 className={`p-8 rounded-3xl h-full flex flex-col transition-all duration-300 ${
                   plan.highlight
-                    ? 'bg-slate-900 border-2 border-cyan-500 shadow-[0_0_40px_rgba(6,182,212,0.2)] transform scale-[1.02]'
-                    : 'bg-slate-900 border border-slate-800 hover:border-violet-500/50'
+                    ? 'bg-slate-900 border border-violet-500/50 shadow-[0_0_30px_rgba(124,58,237,0.3)] transform scale-[1.03]'
+                    : 'bg-slate-900 border border-slate-800'
                 }`}
               >
-                <span
-                  className={`text-sm font-bold uppercase tracking-widest mb-4 ${plan.highlight ? 'text-cyan-400' : 'text-slate-500'}`}
-                >
-                  {plan.highlight ? 'Recommended' : 'Standard'}
-                </span>
-
-                <h3 className="text-3xl font-heading font-bold text-white mb-2">
+                {plan.highlight && (
+                  <span className="text-xs uppercase tracking-widest font-bold text-center bg-violet-600 text-white rounded-full py-1 px-3 mb-4 self-start">
+                    Most Popular
+                  </span>
+                )}
+                <h3 className="text-3xl font-bold font-heading text-white mb-4">
                   {plan.name}
                 </h3>
-                <p className="text-slate-400 font-body mb-8 flex-grow">
+                <p className="text-slate-400 font-body text-sm mb-6">
                   {plan.desc}
                 </p>
-
                 <div className="mb-8">
-                  <span className="text-5xl font-heading font-extrabold text-white">
+                  <span className="text-5xl font-extrabold font-heading text-white">
                     ${plan.price}
                   </span>
-                  <span className="text-xl text-slate-400 ml-2 font-body">
-                    {plan.price.includes('+') ? '' : '/ one-time'}
+                  <span className="text-slate-400">
+                    {selectedService === 'web' ? ' (One-time)' : ' / Month'}
                   </span>
                 </div>
 
-                <ul className="space-y-4 mb-10">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start text-slate-300">
-                      <Check className="w-5 h-5 mr-3 text-violet-400 flex-shrink-0" />
-                      <span className="font-body text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
+                {renderFeatures(plan.features, plan.highlight)}
 
                 <button
-                  className={`w-full py-4 rounded-xl font-bold text-lg font-heading transition-all mt-auto ${
+                  className={`w-full py-4 rounded-xl font-bold font-heading mt-auto transition-all transform hover:-translate-y-0.5 ${
                     plan.highlight
-                      ? 'bg-gradient-primary text-white hover:opacity-90 shadow-lg shadow-violet-500/30'
-                      : 'bg-slate-700 text-white hover:bg-slate-600'
+                      ? 'bg-gradient-primary text-white shadow-lg hover:shadow-violet-500/50'
+                      : 'bg-slate-700 text-slate-200 hover:bg-slate-600'
                   }`}
                 >
-                  {plan.highlight ? 'Start with Apex' : 'Select Plan'}
+                  Start Now
                 </button>
               </div>
             </ScrollFadeIn>
@@ -965,265 +1031,301 @@ const Pricing = () => {
 
 // --- FAQ SECTION ---
 
-const FAQItem = ({ question, answer, isOpen, onClick }) => (
-  <div className="border-b border-slate-800 last:border-b-0">
-    <button
-      className="flex justify-between items-center w-full py-5 text-left transition-colors hover:text-cyan-400"
-      onClick={onClick}
-    >
-      <span className="text-xl font-heading font-medium text-white pr-4">
-        {question}
-      </span>
-      <ChevronDown
-        className={`w-6 h-6 text-cyan-400 transition-transform duration-300 ${isOpen ? 'transform rotate-180' : ''}`}
-      />
-    </button>
-    <div
-      className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-96 opacity-100 py-4' : 'max-h-0 opacity-0'}`}
-    >
-      <p className="text-slate-400 font-body leading-relaxed pl-2 pb-4 text-md">
-        {answer}
-      </p>
-    </div>
-  </div>
-);
+const FAQItem = ({ question, answer }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <ScrollFadeIn className="mb-4 border-b border-slate-700/50">
+      <button
+        className="flex justify-between items-center w-full py-4 text-left"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span className="text-lg font-heading font-medium text-white hover:text-cyan-400 transition-colors">
+          {question}
+        </span>
+        <ChevronDown
+          className={`w-6 h-6 text-slate-400 transition-transform duration-300 ${
+            isOpen ? 'transform rotate-180 text-cyan-400' : ''
+          }`}
+        />
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-500 ease-in-out ${
+          isOpen ? 'max-h-96 opacity-100 pb-4' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <p className="text-slate-400 font-body pr-8">{answer}</p>
+      </div>
+    </ScrollFadeIn>
+  );
+};
 
 const FAQ = () => {
-  const [openIndex, setOpenIndex] = useState(null);
-
   const faqs = [
     {
-      q: 'How long does a typical website development project take?',
-      a: "For our 'Business Engine' package, typical turnaround is 4-6 weeks from initial concept to launch. Complex 'Apex Platform' projects can take 8-12 weeks, depending on custom features and client responsiveness.",
+      question: 'How long does a typical website development project take?',
+      answer:
+        'Our standard Business Engine projects typically take 6-8 weeks from initial kickoff to launch. Complex platforms or highly customized solutions (Apex Platform) can take 3-6 months.',
     },
     {
-      q: 'What results can I expect from your SEO services?',
-      a: "We focus on tangible results: increased organic traffic, higher keyword rankings, and ultimately, more qualified leads. While we don't guarantee specific ranking spots (no ethical agency can), we guarantee a measurable improvement in domain authority and search visibility within 3-4 months.",
+      question: 'Do you offer ongoing maintenance and support?',
+      answer:
+        'Yes, all our development projects include a support period (1-6 months depending on the plan). We also offer monthly maintenance retainer packages to keep your site secure, fast, and up-to-date.',
     },
     {
-      q: 'What technology stack do you use for website builds?',
-      a: 'We primarily build custom solutions using React, Next.js, and modern headless CMS platforms, ensuring maximum performance, speed, and scalability. This delivers superior Core Web Vitals scores compared to traditional platforms.',
+      question: 'What is the ROI of your SEO services?',
+      answer:
+        'Our goal is always profitable growth. While we cannot guarantee rankings, we focus on high-intent commercial keywords. Many clients see a positive return (based on lead value) within 6-12 months of consistent strategy execution.',
     },
     {
-      q: 'Is ongoing maintenance included after the website launch?',
-      a: 'All packages include a period of free post-launch support. After that, we offer affordable monthly maintenance retainers covering security updates, technical monitoring, and minor content adjustments to keep your site running perfectly.',
+      question: 'Can you help us if our current website is built on WordPress?',
+      answer:
+        'Absolutely. We offer audits, speed optimization, and migration services for existing platforms like WordPress, Shopify, and others. We often re-build high-performance versions of existing sites.',
     },
   ];
 
-  const handleClick = index => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
-
   return (
     <section id="faq" className="py-24 bg-slate-900 relative">
-      <div className="max-w-4xl mx-auto px-6">
+      <div className="max-w-7xl mx-auto px-6">
         <SectionHeader
           title="Frequently Asked Questions"
-          subtitle="We've answered the most common inquiries to help you make an informed decision."
+          subtitle="We aim for complete transparency. Find quick answers to the most common inquiries."
         />
 
-        <ScrollFadeIn className="bg-slate-950 border border-slate-800 rounded-2xl p-4 md:p-8 shadow-2xl">
-          {faqs.map((faq, index) => (
-            <FAQItem
-              key={index}
-              question={faq.q}
-              answer={faq.a}
-              isOpen={openIndex === index}
-              onClick={() => handleClick(index)}
-            />
+        <div className="max-w-3xl mx-auto">
+          {faqs.map((faq, i) => (
+            <FAQItem key={i} question={faq.question} answer={faq.answer} />
           ))}
-        </ScrollFadeIn>
+        </div>
       </div>
     </section>
   );
 };
 
-// --- CONTACT SECTION ---
+// --- CONTACT SECTION (API integration preparation) ---
 
 const Contact = () => {
-  const [formStatus, setFormStatus] = useState(null); // 'idle', 'loading', 'success', 'error'
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    service: 'Web Development',
+    message: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [status, setStatus] = useState(null); // 'success', 'error', null
 
-  const handleSubmit = e => {
+  const handleChange = e => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async e => {
     e.preventDefault();
-    setFormStatus('loading');
-    // Mock API call simulation
-    setTimeout(() => {
-      // Simulate success 80% of the time, failure 20%
-      if (Math.random() > 0.2) {
-        setFormStatus('success');
-        e.target.reset();
-      } else {
-        setFormStatus('error');
-      }
-    }, 1500);
+    setIsSubmitting(true);
+    setStatus(null);
+
+    // --- API Placeholder Logic ---
+    console.log('Submitting data:', formData);
+
+    try {
+      // Simulate network request delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Simulate successful submission
+      setStatus('success');
+      setFormData({
+        name: '',
+        email: '',
+        service: 'Web Development',
+        message: '',
+      });
+    } catch (error) {
+      console.error('Submission error:', error);
+      setStatus('error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const Input = ({ name, type = 'text', placeholder, label }) => (
+    <div className="mb-6">
+      <label htmlFor={name} className="block text-sm font-medium text-slate-300 mb-2 font-body">
+        {label}
+      </label>
+      <input
+        type={type}
+        id={name}
+        name={name}
+        value={formData[name]}
+        onChange={handleChange}
+        placeholder={placeholder}
+        required
+        className="w-full p-4 bg-slate-800 border border-slate-700 text-white rounded-xl focus:border-cyan-500 focus:ring-cyan-500 transition-colors placeholder:text-slate-500 font-body"
+      />
+    </div>
+  );
+
+  const StatusMessage = ({ status }) => {
+    if (!status) return null;
+
+    const isSuccess = status === 'success';
+
+    return (
+      <div
+        className={`p-4 mb-6 rounded-xl text-center font-bold font-body transition-all duration-300 ${
+          isSuccess
+            ? 'bg-green-600/20 text-green-400 border border-green-700'
+            : 'bg-red-600/20 text-red-400 border border-red-700'
+        }`}
+      >
+        {isSuccess
+          ? 'Thank you! Your inquiry has been successfully sent. We will be in touch shortly.'
+          : 'Oops! There was an error sending your message. Please try again or contact us via phone.'}
+      </div>
+    );
   };
 
   return (
-    <section
-      id="contact"
-      className="py-24 bg-slate-950 relative overflow-hidden"
-    >
-      {/* Contact Section Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center opacity-10"
-        style={{
-          backgroundImage:
-            'url("https://images.unsplash.com/photo-1542831371-29b0f74f9713?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D")',
-        }}
-      ></div>
-      <div className="absolute inset-0 bg-slate-950/80"></div>
-
-      <div className="max-w-7xl mx-auto px-6 relative z-10">
+    <section id="contact" className="py-24 bg-slate-950 relative">
+      <div className="max-w-7xl mx-auto px-6">
         <SectionHeader
-          title="Ready to Build Your Apex?"
-          subtitle="Schedule your complimentary 15-minute digital strategy analysis today. Zero pressure, maximum insights."
+          title="Ready to Grow? Let's Talk."
+          subtitle="Schedule your free digital analysis session. No obligation, just actionable insights."
         />
 
-        <div className="grid md:grid-cols-2 gap-12 bg-slate-900/90 backdrop-blur-sm p-8 md:p-12 rounded-3xl border border-slate-800 shadow-2xl">
-          {/* Contact Info */}
+        <div className="max-w-4xl mx-auto grid lg:grid-cols-2 gap-12 bg-slate-900 border border-slate-800 rounded-3xl p-8 md:p-12 shadow-[0_0_50px_rgba(6,182,212,0.1)]">
+          {/* Contact Form (Left) */}
           <ScrollFadeIn delay="0ms">
-            <h3 className="text-3xl font-heading font-bold text-white mb-6">
-              Contact Information
-            </h3>
-            <p className="text-slate-400 font-body text-lg mb-8">
-              Reach out to our strategy team directly or use the form to submit
-              a detailed request. We typically respond within 1 business day.
-            </p>
+            <form onSubmit={handleSubmit} className="w-full">
+              <h3 className="text-2xl font-bold font-heading text-white mb-6 border-b border-slate-800 pb-4">
+                Request a Callback
+              </h3>
 
-            <div className="space-y-6">
-              <div className="flex items-start">
-                <Mail className="w-6 h-6 text-cyan-400 mr-4 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-slate-300 font-bold">Email</p>
-                  <a
-                    href="mailto:strategy@apex.digital"
-                    className="text-slate-400 hover:text-cyan-400 transition-colors"
-                  >
-                    strategy@apex.digital
-                  </a>
-                </div>
+              <StatusMessage status={status} />
+
+              <Input name="name" placeholder="Your Name or Company" label="Full Name / Company" />
+              <Input name="email" type="email" placeholder="you@company.com" label="Work Email" />
+
+              <div className="mb-6">
+                <label
+                  htmlFor="service"
+                  className="block text-sm font-medium text-slate-300 mb-2 font-body"
+                >
+                  Service of Interest
+                </label>
+                <select
+                  id="service"
+                  name="service"
+                  value={formData.service}
+                  onChange={handleChange}
+                  className="w-full p-4 bg-slate-800 border border-slate-700 text-white rounded-xl focus:border-cyan-500 focus:ring-cyan-500 appearance-none transition-colors font-body"
+                >
+                  <option>Web Development</option>
+                  <option>SEO Strategy (Monthly)</option>
+                  <option>Reputation Management (Monthly)</option>
+                  <option>General Inquiry</option>
+                </select>
               </div>
-              <div className="flex items-start">
-                <Phone className="w-6 h-6 text-violet-400 mr-4 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-slate-300 font-bold">Phone</p>
-                  <a
-                    href="tel:+1-800-555-0199"
-                    className="text-slate-400 hover:text-violet-400 transition-colors"
-                  >
-                    +1 (800) 555-0199
-                  </a>
-                </div>
-              </div>
-              <div className="flex items-start">
-                <Zap className="w-6 h-6 text-cyan-400 mr-4 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-slate-300 font-bold">Headquarters</p>
-                  <p className="text-slate-400">
-                    100 Tech Tower, Suite 404, Digital City, CA 90210
-                  </p>
-                </div>
-              </div>
-            </div>
 
-            <div className="mt-10 pt-6 border-t border-slate-700">
-              <h4 className="text-white font-heading font-semibold mb-3">
-                Operating Hours
-              </h4>
-              <p className="text-slate-400 font-body">
-                Mon - Fri: 8:00 AM - 6:00 PM (PST)
-              </p>
-            </div>
-          </ScrollFadeIn>
-
-          {/* Contact Form */}
-          <ScrollFadeIn delay="150ms">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {[
-                { name: 'name', label: 'Full Name', type: 'text' },
-                { name: 'email', label: 'Work Email', type: 'email' },
-                { name: 'company', label: 'Company Name', type: 'text' },
-                { name: 'phone', label: 'Phone Number', type: 'tel' },
-              ].map(field => (
-                <div key={field.name}>
-                  <label
-                    htmlFor={field.name}
-                    className="block text-sm font-medium text-slate-300 mb-2 font-body"
-                  >
-                    {field.label}
-                  </label>
-                  <input
-                    type={field.type}
-                    id={field.name}
-                    name={field.name}
-                    required
-                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-cyan-500 focus:border-cyan-500 transition-colors font-body"
-                    placeholder={`Enter your ${field.label.toLowerCase()}`}
-                  />
-                </div>
-              ))}
-
-              <div>
+              <div className="mb-8">
                 <label
                   htmlFor="message"
                   className="block text-sm font-medium text-slate-300 mb-2 font-body"
                 >
-                  Tell us about your project goals
+                  Your Message / Project Details
                 </label>
                 <textarea
                   id="message"
                   name="message"
                   rows="4"
-                  required
-                  className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-cyan-500 focus:border-cyan-500 transition-colors font-body resize-none"
-                  placeholder="I'm looking for a new website and want to rank higher on Google..."
-                ></textarea>
+                  value={formData.message}
+                  onChange={handleChange}
+                  placeholder="Tell us about your project and goals..."
+                  className="w-full p-4 bg-slate-800 border border-slate-700 text-white rounded-xl focus:border-cyan-500 focus:ring-cyan-500 transition-colors placeholder:text-slate-500 font-body"
+                />
               </div>
 
               <button
                 type="submit"
-                disabled={formStatus === 'loading'}
-                className="w-full bg-gradient-primary text-white py-4 rounded-xl font-bold text-lg font-heading hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-primary text-white py-4 rounded-xl font-bold font-heading text-lg flex items-center justify-center hover:shadow-[0_0_30px_rgba(124,58,237,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {formStatus === 'loading' ? (
-                  <svg
-                    className="animate-spin h-5 w-5 mr-3 text-white"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    ></circle>
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    ></path>
-                  </svg>
-                ) : formStatus === 'success' ? (
-                  <Check className="w-6 h-6 mr-2" />
+                {isSubmitting ? (
+                  <>
+                    <svg
+                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Sending...
+                  </>
                 ) : (
-                  <Mail className="w-5 h-5 mr-2" />
+                  <>
+                    Submit Inquiry
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </>
                 )}
-                {formStatus === 'loading'
-                  ? 'Sending...'
-                  : formStatus === 'success'
-                    ? 'Request Sent!'
-                    : 'Submit Request'}
               </button>
-
-              {formStatus === 'error' && (
-                <p className="text-red-400 text-center font-body mt-4">
-                  Submission failed. Please try again or call us directly.
-                </p>
-              )}
             </form>
+          </ScrollFadeIn>
+
+          {/* Contact Details (Right) */}
+          <ScrollFadeIn delay="150ms">
+            <div className="p-8 h-full bg-slate-950 rounded-2xl border border-slate-800 flex flex-col justify-center">
+              <h3 className="text-2xl font-bold font-heading text-cyan-400 mb-6 border-b border-slate-800 pb-4">
+                Direct Contact
+              </h3>
+              <ul className="space-y-6 text-slate-300">
+                <li className="flex items-start">
+                  <Phone className="w-6 h-6 mr-4 text-violet-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <p className="font-semibold text-lg font-heading text-white">
+                      Call Us
+                    </p>
+                    <p className="text-sm font-body">
+                      (555) 123-4567 - M-F 9am-5pm EST
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start">
+                  <Mail className="w-6 h-6 mr-4 text-violet-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <p className="font-semibold text-lg font-heading text-white">
+                      Email Us
+                    </p>
+                    <p className="text-sm font-body">
+                      hello@apexdigital.co
+                    </p>
+                  </div>
+                </li>
+                <li className="flex items-start">
+                  <Users className="w-6 h-6 mr-4 text-violet-400 flex-shrink-0 mt-1" />
+                  <div>
+                    <p className="font-semibold text-lg font-heading text-white">
+                      Business Address
+                    </p>
+                    <p className="text-sm font-body">
+                      123 Tech Drive, Suite 200, Innovation City, CA 90210
+                    </p>
+                  </div>
+                </li>
+              </ul>
+              
+            </div>
           </ScrollFadeIn>
         </div>
       </div>
@@ -1234,88 +1336,89 @@ const Contact = () => {
 // --- FOOTER ---
 
 const Footer = ({ scrollToSection }) => (
-  <footer className="bg-slate-900 border-t border-slate-800 py-12">
+  <footer className="bg-slate-950 border-t border-slate-800 pt-16 pb-12">
     <div className="max-w-7xl mx-auto px-6">
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
-        {/* Logo & Mission */}
-        <div className="col-span-2 md:col-span-2">
-          <div className="flex items-center space-x-2 font-heading font-bold text-2xl text-white mb-4">
+      <div className="grid md:grid-cols-4 gap-12 border-b border-slate-800 pb-10">
+        {/* Logo & Tagline */}
+        <div className="md:col-span-1">
+          <div
+            className="flex items-center space-x-2 font-heading font-bold text-2xl text-white mb-4 cursor-pointer"
+            onClick={() => scrollToSection('hero')}
+          >
             <Zap className="w-6 h-6 text-cyan-400" />
             <span>
               Apex<span className="text-cyan-400">Digital</span>
             </span>
           </div>
-          <p className="text-sm text-slate-400 font-body max-w-xs">
-            Elevating businesses through elite digital strategy, custom
-            development, and search dominance.
+          <p className="text-slate-400 text-sm font-body">
+            Elevating businesses to their digital peak. Specializing in
+            performance and authority.
           </p>
         </div>
 
         {/* Quick Links */}
         <div>
-          <h4 className="text-lg font-heading font-bold text-white mb-4">
-            Navigation
+          <h4 className="text-white font-heading font-bold text-lg mb-4">
+            Quick Links
           </h4>
-          <ul className="space-y-3 text-sm">
-            {['hero', 'services', 'work', 'pricing', 'faq'].map(id => (
-              <li key={id}>
+          <ul className="space-y-3">
+            {['Services', 'Work', 'Pricing', 'FAQ'].map(item => (
+              <li key={item}>
                 <button
-                  onClick={() => scrollToSection(id)}
-                  className="text-slate-400 hover:text-cyan-400 transition-colors font-body"
+                  onClick={() => scrollToSection(item.toLowerCase())}
+                  className="text-slate-400 hover:text-cyan-400 text-sm transition-colors font-body"
                 >
-                  {id.charAt(0).toUpperCase() + id.slice(1)}
+                  {item}
                 </button>
               </li>
             ))}
           </ul>
         </div>
 
-        {/* Services */}
+        {/* Our Services */}
         <div>
-          <h4 className="text-lg font-heading font-bold text-white mb-4">
+          <h4 className="text-white font-heading font-bold text-lg mb-4">
             Services
           </h4>
-          <ul className="space-y-3 text-sm text-slate-400 font-body">
-            <li>Website Development</li>
-            <li>SEO Strategy</li>
-            <li>Reputation Management</li>
-            <li>Conversion Optimization</li>
+          <ul className="space-y-3">
+            {['Custom Websites', 'Advanced SEO', 'Reputation Management', 'Consulting'].map(
+              (service, i) => (
+                <li key={i}>
+                  <span className="text-slate-400 text-sm font-body hover:text-cyan-400 transition-colors cursor-default">
+                    {service}
+                  </span>
+                </li>
+              )
+            )}
           </ul>
         </div>
 
-        {/* Connect */}
+        {/* Contact & Legal */}
         <div>
-          <h4 className="text-lg font-heading font-bold text-white mb-4">
-            Connect
+          <h4 className="text-white font-heading font-bold text-lg mb-4">
+            Direct Contact
           </h4>
-          <ul className="space-y-3 text-sm text-slate-400 font-body">
-            <li>
-              <a href="#" className="hover:text-violet-400 transition-colors">
-                LinkedIn
-              </a>
+          <ul className="space-y-3 text-sm font-body">
+            <li className="text-slate-300 flex items-center">
+              <Mail className="w-4 h-4 mr-2 text-cyan-400" />
+              hello@apexdigital.co
             </li>
-            <li>
-              <a href="#" className="hover:text-violet-400 transition-colors">
-                Twitter (X)
-              </a>
+            <li className="text-slate-300 flex items-center">
+              <Phone className="w-4 h-4 mr-2 text-cyan-400" />
+              (555) 123-4567
             </li>
-            <li>
-              <a href="#" className="hover:text-violet-400 transition-colors">
-                Facebook
+            <li className="text-slate-500 pt-4">
+              <a href="#" className="hover:text-white transition-colors">
+                Privacy Policy
               </a>
             </li>
           </ul>
         </div>
       </div>
-
-      <div className="mt-12 pt-8 border-t border-slate-800 text-center">
-        <p className="text-sm text-slate-500 font-body">
-          &copy; {new Date().getFullYear()} Apex Digital. All rights reserved. |{' '}
-          <a href="#" className="hover:text-cyan-400">
-            Privacy Policy
-          </a>
-        </p>
+      <div className="pt-8 text-center text-sm text-slate-500 font-body">
+        &copy; {new Date().getFullYear()} Apex Digital. All rights reserved.
       </div>
+      {/* The main purpose of this div is to hold the footer content */}
     </div>
   </footer>
 );
@@ -1323,20 +1426,21 @@ const Footer = ({ scrollToSection }) => (
 // --- MAIN APP COMPONENT ---
 
 const App = () => {
-  // Function to handle scrolling to a section
-  const scrollToSection = id => {
+  const sectionsRef = useRef({});
+
+  const scrollToSection = useCallback(id => {
     const element = document.getElementById(id);
     if (element) {
-      // Calculate scroll position, adjusting for fixed header (approx 80px)
-      const yOffset = -80;
-      const y =
-        element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: 'smooth' });
+      element.scrollIntoView({ behavior: 'smooth' });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    document.body.style.backgroundColor = '#020617';
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-body">
+    <div className="min-h-screen antialiased bg-slate-950 font-body">
       <Header scrollToSection={scrollToSection} />
       <main>
         <Hero scrollToSection={scrollToSection} />
